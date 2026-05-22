@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏇 KRA AI 경마 예측 대시보드</title>
+  <!-- React 및 ReactDOM 로드 -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- Babel Standalone 로드 -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Tailwind CSS 로드 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Noto Sans KR 및 Outfit 폰트 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: {
+              950: '#060B13',
+              900: '#0D1B2A',
+              800: '#1B263B',
+              700: '#415A77',
+              600: '#778DA9',
+            },
+            gold: {
+              DEFAULT: '#F5C842',
+              light: '#F8D675',
+              dark: '#C99E1F',
+            },
+            emerald: {
+              DEFAULT: '#1D9E75',
+              light: '#2CC091',
+            },
+            warning: {
+              DEFAULT: '#EF9F27',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+      background-color: #060B13;
+      color: #F8FAFC;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0D1B2A;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #415A77;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #F5C842;
+    }
+    .glassmorphism {
+      background: rgba(27, 38, 59, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(245, 200, 66, 0.15);
+    }
+  </style>
+</head>
+<body class="custom-scrollbar">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // 1. Mock 데이터 정의 (경주 정보 및 출전마 스펙)
+    const RACES = [
+      {
+        id: "2024-11-03-1R",
+        date: "2024.11.03",
+        no: "1R",
+        dist: "1200M",
+        track: "양호 (6%)",
+        weather: "맑음",
+        horses: [
+          { name: "천하무적", gate: 1, age: 4, weight: 504, weight_diff: 2, burd_wgt: 54, jockey: "송재철", trainer: "서인석", odds: 3.1, top3_rate_last_5: 0.80, avg_rank_last_3: 1.3, avg_gap_last_3: 0.2, jockey_rate: 0.38, trainer_rate: 0.31, days_rest: 28, race_count: 22, is_debut: 0 },
+          { name: "스피드킹", gate: 2, age: 3, weight: 490, weight_diff: 3, burd_wgt: 53, jockey: "임다빈", trainer: "박재우", odds: 5.5, top3_rate_last_5: 0.60, avg_rank_last_3: 2.0, avg_gap_last_3: 0.4, jockey_rate: 0.32, trainer_rate: 0.28, days_rest: 30, race_count: 12, is_debut: 0 },
+          { name: "황금마차", gate: 7, age: 5, weight: 512, weight_diff: 1, burd_wgt: 55, jockey: "장추열", trainer: "강환민", odds: 32.0, top3_rate_last_5: 0.50, avg_rank_last_3: 3.5, avg_gap_last_3: 0.8, jockey_rate: 0.25, trainer_rate: 0.24, days_rest: 35, race_count: 15, is_debut: 0 },
+          { name: "번개돌이", gate: 9, age: 3, weight: 475, weight_diff: 0, burd_wgt: 52, jockey: "김아현", trainer: "박윤규", odds: 15.0, top3_rate_last_5: 0.00, avg_rank_last_3: null, avg_gap_last_3: null, jockey_rate: 0.15, trainer_rate: 0.18, days_rest: null, race_count: 0, is_debut: 1 },
+          { name: "쾌속질주", gate: 4, age: 4, weight: 498, weight_diff: -6, burd_wgt: 54, jockey: "유승완", trainer: "박병일", odds: 8.4, top3_rate_last_5: 0.40, avg_rank_last_3: 4.2, avg_gap_last_3: 1.1, jockey_rate: 0.22, trainer_rate: 0.20, days_rest: 65, race_count: 18, is_debut: 0 },
+          { name: "야호자이언트", gate: 6, age: 5, weight: 520, weight_diff: 0, burd_wgt: 56, jockey: "김태희", trainer: "정호익", odds: 12.0, top3_rate_last_5: 0.30, avg_rank_last_3: 5.1, avg_gap_last_3: 1.5, jockey_rate: 0.18, trainer_rate: 0.15, days_rest: 45, race_count: 25, is_debut: 0 },
+          { name: "블랙스톰", gate: 10, age: 4, weight: 482, weight_diff: 4, burd_wgt: 54, jockey: "다비드", trainer: "안병기", odds: 24.5, top3_rate_last_5: 0.45, avg_rank_last_3: 3.9, avg_gap_last_3: 0.9, jockey_rate: 0.28, trainer_rate: 0.22, days_rest: 25, race_count: 10, is_debut: 0 },
+          { name: "새벽바람", gate: 5, age: 3, weight: 465, weight_diff: 2, burd_wgt: 51, jockey: "이혁", trainer: "홍대유", odds: 4.2, top3_rate_last_5: 0.70, avg_rank_last_3: 2.1, avg_gap_last_3: 0.5, jockey_rate: 0.30, trainer_rate: 0.29, days_rest: 24, race_count: 8, is_debut: 0 }
+        ]
+      },
+      {
+        id: "2024-11-03-5R",
+        date: "2024.11.03",
+        no: "5R",
+        dist: "1800M",
+        track: "다습 (14%)",
+        weather: "흐림",
+        horses: [
+          { name: "백록담", gate: 3, age: 4, weight: 510, weight_diff: 3, burd_wgt: 55, jockey: "페로비치", trainer: "김대근", odds: 2.8, top3_rate_last_5: 0.90, avg_rank_last_3: 1.2, avg_gap_last_3: 0.1, jockey_rate: 0.42, trainer_rate: 0.35, days_rest: 28, race_count: 14, is_debut: 0 },
+          { name: "한라산", gate: 8, age: 5, weight: 525, weight_diff: 1, burd_wgt: 56, jockey: "문세영", trainer: "김동균", odds: 4.5, top3_rate_last_5: 0.75, avg_rank_last_3: 2.2, avg_gap_last_3: 0.5, jockey_rate: 0.45, trainer_rate: 0.33, days_rest: 35, race_count: 30, is_debut: 0 },
+          { name: "설악바람", gate: 5, age: 3, weight: 480, weight_diff: -1, burd_wgt: 52, jockey: "조한우", trainer: "최영주", odds: 45.0, top3_rate_last_5: 0.52, avg_rank_last_3: 3.8, avg_gap_last_3: 1.0, jockey_rate: 0.22, trainer_rate: 0.20, days_rest: 28, race_count: 11, is_debut: 0 },
+          { name: "오대산", gate: 1, age: 4, weight: 495, weight_diff: 4, burd_wgt: 54, jockey: "이현종", trainer: "지용철", odds: 18.0, top3_rate_last_5: 0.40, avg_rank_last_3: 4.5, avg_gap_last_3: 1.3, jockey_rate: 0.20, trainer_rate: 0.18, days_rest: 42, race_count: 16, is_debut: 0 },
+          { name: "태백산맥", gate: 11, age: 3, weight: 488, weight_diff: 0, burd_wgt: 53, jockey: "빅투아르", trainer: "배대선", odds: 9.2, top3_rate_last_5: 0.55, avg_rank_last_3: 3.1, avg_gap_last_3: 0.7, jockey_rate: 0.31, trainer_rate: 0.27, days_rest: 32, race_count: 7, is_debut: 0 },
+          { name: "지리산천왕", gate: 4, age: 5, weight: 515, weight_diff: -7, burd_wgt: 56, jockey: "송재철", trainer: "유재길", odds: 15.0, top3_rate_last_5: 0.35, avg_rank_last_3: 4.9, avg_gap_last_3: 1.4, jockey_rate: 0.24, trainer_rate: 0.22, days_rest: 75, race_count: 28, is_debut: 0 },
+          { name: "금강산", gate: 9, age: 3, weight: 472, weight_diff: 1, burd_wgt: 52, jockey: "정정희", trainer: "곽영효", odds: 28.0, top3_rate_last_5: 0.00, avg_rank_last_3: null, avg_gap_last_3: null, jockey_rate: 0.18, trainer_rate: 0.15, days_rest: null, race_count: 0, is_debut: 1 },
+          { name: "무등산", gate: 2, age: 4, weight: 502, weight_diff: 2, burd_wgt: 54, jockey: "김효정", trainer: "박흥진", odds: 7.0, top3_rate_last_5: 0.65, avg_rank_last_3: 2.8, avg_gap_last_3: 0.6, jockey_rate: 0.26, trainer_rate: 0.25, days_rest: 25, race_count: 12, is_debut: 0 }
+        ]
+      },
+      {
+        id: "2024-11-03-9R",
+        date: "2024.11.03",
+        no: "9R",
+        dist: "1400M",
+        track: "포화 (18%)",
+        weather: "맑음",
+        horses: [
+          { name: "일념통천", gate: 5, age: 4, weight: 508, weight_diff: 3, burd_wgt: 54, jockey: "유승완", trainer: "서인석", odds: 2.5, top3_rate_last_5: 0.85, avg_rank_last_3: 1.4, avg_gap_last_3: 0.2, jockey_rate: 0.38, trainer_rate: 0.31, days_rest: 28, race_count: 19, is_debut: 0 },
+          { name: "천리마", gate: 2, age: 5, weight: 518, weight_diff: 2, burd_wgt: 56, jockey: "장추열", trainer: "강환민", odds: 5.0, top3_rate_last_5: 0.70, avg_rank_last_3: 2.3, avg_gap_last_3: 0.5, jockey_rate: 0.35, trainer_rate: 0.30, days_rest: 30, race_count: 24, is_debut: 0 },
+          { name: "적토마", gate: 8, age: 3, weight: 488, weight_diff: 1, burd_wgt: 52, jockey: "김아현", trainer: "박윤규", odds: 35.0, top3_rate_last_5: 0.52, avg_rank_last_3: 3.2, avg_gap_last_3: 0.6, jockey_rate: 0.28, trainer_rate: 0.26, days_rest: 35, race_count: 10, is_debut: 0 },
+          { name: "우뢰매", gate: 12, age: 4, weight: 498, weight_diff: -8, burd_wgt: 54, jockey: "김태희", trainer: "정호익", odds: 14.0, top3_rate_last_5: 0.45, avg_rank_last_3: 4.0, avg_gap_last_3: 0.9, jockey_rate: 0.22, trainer_rate: 0.21, days_rest: 70, race_count: 15, is_debut: 0 },
+          { name: "비호", gate: 6, age: 3, weight: 482, weight_diff: 4, burd_wgt: 53, jockey: "임다빈", trainer: "박재우", odds: 8.8, top3_rate_last_5: 0.60, avg_rank_last_3: 2.9, avg_gap_last_3: 0.6, jockey_rate: 0.32, trainer_rate: 0.28, days_rest: 32, race_count: 9, is_debut: 0 },
+          { name: "야생마", gate: 3, age: 4, weight: 492, weight_diff: 10, burd_wgt: 54, jockey: "이혁", trainer: "홍대유", odds: 18.0, top3_rate_last_5: 0.40, avg_rank_last_3: 4.8, avg_gap_last_3: 1.3, jockey_rate: 0.20, trainer_rate: 0.18, days_rest: 45, race_count: 13, is_debut: 0 },
+          { name: "태풍선풍", gate: 10, age: 3, weight: 470, weight_diff: 2, burd_wgt: 51, jockey: "이현종", trainer: "지용철", odds: 40.0, top3_rate_last_5: 0.35, avg_rank_last_3: 5.0, avg_gap_last_3: 1.4, jockey_rate: 0.24, trainer_rate: 0.20, days_rest: 28, race_count: 6, is_debut: 0 },
+          { name: "화룡점정", gate: 1, age: 5, weight: 505, weight_diff: 0, burd_wgt: 55, jockey: "페로비치", trainer: "김동균", odds: 6.5, top3_rate_last_5: 0.68, avg_rank_last_3: 2.7, avg_gap_last_3: 0.5, jockey_rate: 0.30, trainer_rate: 0.29, days_rest: 25, race_count: 22, is_debut: 0 }
+        ]
+      }
+    ];
+
+    // 2. 모델 상대 피처 연산 및 분류 기준 매핑
+    function calcRelFeatures(horses) {
+      const avg = arr => arr.reduce((a,b) => a+b, 0) / arr.length;
+      
+      const avgTop3 = avg(horses.map(h => h.top3_rate_last_5));
+      const avgJockey = avg(horses.map(h => h.jockey_rate));
+      const avgTrainer = avg(horses.map(h => h.trainer_rate));
+      const avgOdds = avg(horses.map(h => h.odds));
+      
+      return horses.map(h => {
+        const synergy = h.jockey_rate * h.trainer_rate;
+        const is_peak = (h.weight_diff >= 0 && h.weight_diff <= 5 &&
+                         h.days_rest >= 21 && h.days_rest <= 42) ? 1 : 0;
+        
+        // 상대 피처
+        const rel_top3 = h.top3_rate_last_5 - avgTop3;
+        const rel_jockey = h.jockey_rate - avgJockey;
+        const rel_synergy = synergy - avg(horses.map(x => x.jockey_rate * x.trainer_rate));
+        
+        // 피크폼 지수
+        const rank_fill = h.avg_rank_last_3 ?? 7;
+        const gap_fill = h.avg_gap_last_3 ?? 3.0;
+        const peak_form_index = 1 / ((rank_fill * gap_fill) + 1);
+        
+        // 다크호스 점수
+        const dark_horse_score = (h.odds / 10.0) * h.top3_rate_last_5;
+        
+        // LightGBM 근사 점수
+        let score = 0;
+        score += rel_top3 * 2.5;
+        score += rel_jockey * 2.0;
+        score += rel_synergy * 1.8;
+        score += peak_form_index * 1.5;
+        score += is_peak * 0.4;
+        score += dark_horse_score * 0.3;
+        score += (h.is_debut ? -0.4 : 0.1);
+        
+        const prob = 1 / (1 + Math.exp(-score));
+        
+        // EV 계산
+        const ev = (prob * h.odds) - (1 - prob);
+        
+        // 방향별 추천 여부
+        const recallFlag = prob >= 0.30;
+        const precisionFlag = prob >= 0.70;
+        const evFlag = ev > 0;
+        
+        // 켈리 기준
+        const b = h.odds - 1;
+        const kelly = Math.max(0, (b * prob - (1 - prob)) / b);
+        
+        return {
+          ...h, synergy, is_peak, peak_form_index,
+          dark_horse_score, prob: prob * 100, ev,
+          recallFlag, precisionFlag, evFlag, kelly
+        };
+      });
+    }
+
+    // 3. UI 서브 컴포넌트들
+    const TrackBadge = ({ track }) => {
+      let badgeStyle = "bg-green-900/60 text-green-400 border-green-700/50";
+      if (track.includes("양호")) badgeStyle = "bg-blue-900/60 text-blue-400 border-blue-700/50";
+      else if (track.includes("다습")) badgeStyle = "bg-amber-900/60 text-amber-400 border-amber-700/50";
+      else if (track.includes("포화") || track.includes("불량")) badgeStyle = "bg-red-900/60 text-red-400 border-red-700/50";
+
+      return (
+        <span class={`px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider ${badgeStyle}`}>
+          주로: {track}
+        </span>
+      );
+    };
+
+    const ProbBar = ({ value, size = "w-24" }) => {
+      const color = value >= 50 ? "#1D9E75" : value >= 30 ? "#EF9F27" : "#B4B2A9";
+
+      return (
+        <div class="flex items-center gap-2">
+          <div class={`${size} bg-navy-950 rounded-full h-2.5 overflow-hidden border border-navy-700/30`}>
+            <div class="h-full rounded-full" style={{ width: `${Math.min(100, value)}%`, backgroundColor: color }}></div>
+          </div>
+          <span class="text-xs font-semibold font-mono w-10 text-right text-slate-300">{value.toFixed(1)}%</span>
+        </div>
+      );
+    };
+
+    const ConditionLight = ({ horse }) => {
+      if (horse.is_debut === 1) {
+        return (
+          <div class="flex items-center gap-1.5 group relative cursor-help">
+            <span class="w-3 h-3 rounded-full" style={{ backgroundColor: "#B4B2A9" }}></span>
+            <span class="text-xs text-slate-400 font-medium">첫출전</span>
+            <div class="absolute bottom-full mb-2 hidden group-hover:block w-48 bg-navy-950/95 border border-navy-700 text-[10px] text-slate-300 p-2 rounded shadow-xl z-50">
+              과거 데이터 없음 — 신예마 특성 참고
+            </div>
+          </div>
+        );
+      }
+
+      const cond1 = horse.weight_diff >= 0 && horse.weight_diff <= 5;
+      const cond2 = horse.days_rest >= 21 && horse.days_rest <= 42;
+      const warningCond = horse.weight_diff <= -5 || horse.days_rest >= 60;
+
+      let color = "#EF9F27";
+      let label = "보통";
+
+      if (cond1 && cond2) {
+        color = "#1D9E75";
+        label = "최적";
+      } else if (warningCond) {
+        color = "#EF4444";
+        label = "주의";
+      }
+
+      return (
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></span>
+          <span class="text-xs font-medium">{label}</span>
+        </div>
+      );
+    };
+
+    const GateTag = ({ gate }) => {
+      let badgeStyle = "bg-green-950/60 text-green-400 border-green-800/40";
+      let label = "내측";
+      if (gate >= 5 && gate <= 8) {
+        badgeStyle = "bg-amber-950/60 text-amber-400 border-amber-800/40";
+        label = "중간";
+      } else if (gate >= 9) {
+        badgeStyle = "bg-red-950/60 text-red-400 border-red-800/40";
+        label = "외측";
+      }
+
+      return (
+        <div class="flex items-center gap-1">
+          <span class="font-bold text-sm bg-navy-950/95 text-gold-light w-6 h-6 flex items-center justify-center rounded border border-navy-700/50">{gate}</span>
+          <span class={`text-[10px] px-1.5 py-0.5 rounded border ${badgeStyle}`}>{label}</span>
+        </div>
+      );
+    };
+
+    const EVBadge = ({ value }) => {
+      const badgeStyle = value > 0 
+        ? "bg-emerald-950/80 text-emerald-400 border-emerald-800/40" 
+        : "bg-red-950/80 text-red-400 border-red-800/40";
+      return (
+        <span class={`px-2 py-0.5 rounded border text-[10px] font-mono font-semibold ${badgeStyle}`}>
+          {value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2)}
+        </span>
+      );
+    };
+
+    // 4. 메인 앱 컴포넌트
+    function App() {
+      const [selectedRaceId, setSelectedRaceId] = useState(RACES[0].id);
+      const [activeTab, setActiveTab] = useState("A");
+      const [betBudget, setBetBudget] = useState(50000);
+      const [breakEvenHorseName, setBreakEvenHorseName] = useState("");
+
+      // 현재 경주 데이터 로드 및 피처 계산
+      const currentRace = useMemo(() => {
+        return RACES.find(r => r.id === selectedRaceId);
+      }, [selectedRaceId]);
+
+      const calculatedHorses = useMemo(() => {
+        if (!currentRace) return [];
+        const processed = calcRelFeatures(currentRace.horses);
+        // 확률순 정렬
+        return processed.sort((a, b) => b.prob - a.prob);
+      }, [currentRace]);
+
+      // 1번 인기마 (최저 배당률)
+      const favoriteHorse = useMemo(() => {
+        if (calculatedHorses.length === 0) return null;
+        return [...calculatedHorses].sort((a,b) => a.odds - b.odds)[0];
+      }, [calculatedHorses]);
+
+      // 다크호스 후보 탐지: 배당률 >= 30 이고 예측확률 >= 35%
+      const darkHorses = useMemo(() => {
+        return calculatedHorses.filter(h => h.odds >= 30 && h.prob >= 35);
+      }, [calculatedHorses]);
+
+      // 포트폴리오용 다크호스 후보: 방향 A(Recall) ∩ 방향 C(EV) 교집합 & 배당률 >= 10
+      const portfolioDarkHorses = useMemo(() => {
+        return calculatedHorses.filter(h => h.recallFlag && h.evFlag && h.odds >= 10);
+      }, [calculatedHorses]);
+
+      // 이변 확률 계산 (다습/포화 트랙 감지 기반 기본값 설정)
+      const upsetProbability = useMemo(() => {
+        if (!currentRace) return "낮음";
+        if (currentRace.track.includes("포화") || currentRace.track.includes("불량")) return "매우 높음 (38%)";
+        if (currentRace.track.includes("다습")) return "높음 (24%)";
+        return "보통 (12%)";
+      }, [currentRace]);
+
+      // 손익분기 역산용 말 선택 기본 설정
+      useEffect(() => {
+        if (calculatedHorses.length > 0) {
+          setBreakEvenHorseName(calculatedHorses[0].name);
+        }
+      }, [calculatedHorses]);
+
+      const breakEvenHorse = useMemo(() => {
+        return calculatedHorses.find(h => h.name === breakEvenHorseName);
+      }, [breakEvenHorseName, calculatedHorses]);
+
+      // 3방향 모델 결과 분리
+      const directionA_Recall = useMemo(() => {
+        return calculatedHorses.filter(h => h.recallFlag).slice(0, 3);
+      }, [calculatedHorses]);
+
+      const directionB_Precision = useMemo(() => {
+        return calculatedHorses.filter(h => h.precisionFlag).slice(0, 3);
+      }, [calculatedHorses]);
+
+      const directionC_EV = useMemo(() => {
+        return [...calculatedHorses].filter(h => h.evFlag).sort((a,b) => b.ev - a.ev).slice(0, 3);
+      }, [calculatedHorses]);
+
+      // 켈리 기준 포트폴리오 계산
+      const kellyAllocations = useMemo(() => {
+        const withKelly = calculatedHorses.filter(h => h.kelly > 0);
+        const sumKelly = withKelly.reduce((acc, h) => acc + h.kelly, 0);
+        if (sumKelly === 0) return [];
+        return withKelly.map(h => {
+          const ratio = h.kelly / sumKelly;
+          return {
+            name: h.name,
+            odds: h.odds,
+            ratio: ratio,
+            amount: Math.round((betBudget * ratio) / 1000) * 1000,
+            prob: h.prob
+          };
+        }).sort((a,b) => b.amount - a.amount);
+      }, [calculatedHorses, betBudget]);
+
+      return (
+        <div class="min-h-screen bg-navy-950 text-slate-100 flex flex-col justify-between">
+          
+          {/* Header 영역 */}
+          <header class="border-b border-navy-800 bg-navy-900/90 sticky top-0 z-40 backdrop-blur-md">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div class="flex items-center gap-3">
+                <span class="text-3xl">🏇</span>
+                <div>
+                  <h1 class="text-xl font-black text-gold tracking-tight uppercase flex items-center gap-2">
+                    🏇 경마 예측 <span class="text-xs bg-red-600 text-white px-2 py-0.5 rounded font-mono">LIVE</span>
+                  </h1>
+                  <p class="text-xs text-navy-600">LightGBM & Relative Features 기반 실시간 의사결정 시스템</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <select 
+                  value={selectedRaceId} 
+                  onChange={(e) => setSelectedRaceId(e.target.value)}
+                  class="bg-navy-800 border border-navy-700 text-slate-100 px-3 py-1.5 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-gold"
+                >
+                  {RACES.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.date} | {r.no} ({r.dist})
+                    </option>
+                  ))}
+                </select>
+
+                <TrackBadge track={currentRace?.track || ""} />
+              </div>
+            </div>
+          </header>
+
+          {/* Main 영역 */}
+          <main class="max-w-7xl w-full mx-auto px-4 py-6 flex-grow flex flex-col gap-6">
+            
+            {/* Summary 카드 영역 */}
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="glassmorphism p-4 rounded-xl flex flex-col justify-between shadow-lg">
+                <span class="text-xs font-semibold text-slate-400">출전 두수</span>
+                <span class="text-2xl font-black text-slate-100 mt-1">{calculatedHorses.length}두</span>
+              </div>
+              <div class="glassmorphism p-4 rounded-xl flex flex-col justify-between shadow-lg">
+                <span class="text-xs font-semibold text-slate-400">1번 인기마 (배당률)</span>
+                <span class="text-lg font-black text-gold mt-1 truncate">
+                  {favoriteHorse ? `${favoriteHorse.name} (${favoriteHorse.odds.toFixed(1)}배)` : "-"}
+                </span>
+              </div>
+              <div class="glassmorphism p-4 rounded-xl flex flex-col justify-between shadow-lg relative overflow-hidden">
+                <span class="text-xs font-semibold text-slate-400">다크호스 탐지 수</span>
+                <span class={`text-2xl font-black mt-1 ${darkHorses.length > 0 ? "text-amber-500 animate-pulse" : "text-slate-100"}`}>
+                  {darkHorses.length}두
+                </span>
+                {darkHorses.length > 0 && <span class="absolute top-2 right-2 bg-amber-500 text-navy-950 font-black text-[9px] px-1 rounded-sm">HOT</span>}
+              </div>
+              <div class="glassmorphism p-4 rounded-xl flex flex-col justify-between shadow-lg">
+                <span class="text-xs font-semibold text-slate-400">이변 확률</span>
+                <span class="text-lg font-black text-red-400 mt-1">{upsetProbability}</span>
+              </div>
+            </div>
+
+            {/* 다크호스 경보 알림 배너 */}
+            {darkHorses.length > 0 && (
+              <div class="bg-gradient-to-r from-amber-600/30 via-red-600/20 to-navy-900 border border-amber-500/40 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xl">
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl">🔥</span>
+                  <div>
+                    <h3 class="text-sm font-bold text-amber-400">초고배당 다크호스 감지!</h3>
+                    <p class="text-xs text-slate-300">배당 30배 이상 & 입상 확률 35% 이상 조건을 만족하는 요주의 마필이 있습니다.</p>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  {darkHorses.map(dh => (
+                    <div key={dh.name} class="bg-navy-950/80 border border-amber-500/50 px-3 py-1.5 rounded-lg flex items-center gap-3 text-xs">
+                      <span class="font-bold text-slate-100">{dh.name}</span>
+                      <span class="text-gold font-mono font-bold">{dh.odds.toFixed(1)}배</span>
+                      <span class="text-emerald font-mono font-bold">{dh.prob.toFixed(1)}%</span>
+                      <span class="bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded text-[10px] font-mono">EV: +{dh.ev.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 탭 네비게이션 */}
+            <div class="flex border-b border-navy-800">
+              <button 
+                onClick={() => setActiveTab("A")}
+                class={`flex-1 py-3 text-sm font-black tracking-wide border-b-2 transition-all duration-150 ${activeTab === 'A' ? 'border-gold text-gold bg-navy-900/30' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              >
+                📊 View A: 전체 분석
+              </button>
+              <button 
+                onClick={() => setActiveTab("B")}
+                class={`flex-1 py-3 text-sm font-black tracking-wide border-b-2 transition-all duration-150 ${activeTab === 'B' ? 'border-gold text-gold bg-navy-900/30' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              >
+                🎲 View B: 베팅 결정
+              </button>
+              <button 
+                onClick={() => setActiveTab("C")}
+                class={`flex-1 py-3 text-sm font-black tracking-wide border-b-2 transition-all duration-150 ${activeTab === 'C' ? 'border-gold text-gold bg-navy-900/30' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              >
+                💼 View C: 포트폴리오
+              </button>
+            </div>
+
+            {/* 탭 내부 콘텐츠 */}
+            <div class="flex-grow">
+              
+              {/* View A — 전체 분석 탭 */}
+              {activeTab === 'A' && (
+                <div class="flex flex-col gap-6">
+                  
+                  {/* 게이트x거리 인사이트 박스 */}
+                  <div class="bg-navy-900/50 border border-navy-800 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <span class="text-xl">💡</span>
+                      <div>
+                        <h4 class="text-xs font-bold text-gold">경주로 및 게이트 조건별 AI 특수 분석</h4>
+                        <p class="text-xs text-slate-300 mt-0.5">
+                          {parseInt(currentRace.dist) <= 1400 
+                            ? "내측 게이트 유리 — 외측 대비 약 8%p 높은 입상률"
+                            : "거리 적성이 게이트보다 중요"}
+                        </p>
+                      </div>
+                    </div>
+                    {(currentRace.track.includes("다습") || currentRace.track.includes("포화") || currentRace.track.includes("불량")) && (
+                      <div class="bg-amber-950/60 border border-amber-800/60 px-3 py-2 rounded-lg text-xs flex items-center gap-2">
+                        <span class="text-warning">⚠️</span>
+                        <span class="text-amber-300 font-semibold">이변 발생률 +0.9%p — 고배당 주목</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 출전마 비교 테이블 */}
+                  <div class="glassmorphism rounded-xl overflow-hidden shadow-lg border border-navy-800">
+                    <div class="overflow-x-auto custom-scrollbar">
+                      <table class="w-full text-left border-collapse min-w-[700px]">
+                        <thead>
+                          <tr class="bg-navy-900/90 text-navy-600 uppercase text-[10px] tracking-wider font-extrabold border-b border-navy-800">
+                            <th class="py-4 px-4 text-center">예측 순위</th>
+                            <th class="py-4 px-4">마필명</th>
+                            <th class="py-4 px-4">게이트</th>
+                            <th class="py-4 px-4">연령 / 체중변화</th>
+                            <th class="py-4 px-4 text-center">최근기세 (5경기 Top3)</th>
+                            <th class="py-4 px-4 text-center">기수-조교사 시너지</th>
+                            <th class="py-4 px-4 text-center">컨디션 신호</th>
+                            <th class="py-4 px-4 text-right">배당률</th>
+                            <th class="py-4 px-6 text-right">예측 입상 확률</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-navy-800/40">
+                          {calculatedHorses.map((h, index) => {
+                            const isTop3 = index < 3;
+                            return (
+                              <tr 
+                                key={h.name} 
+                                class={`transition-all duration-100 hover:bg-navy-800/40 ${isTop3 ? 'bg-gold-dark/10 border-l-4 border-l-gold' : ''}`}
+                              >
+                                <td class="py-4 px-4 text-center">
+                                  <span class={`inline-flex items-center justify-center w-6 h-6 rounded-full font-black text-xs ${index === 0 ? 'bg-gold text-navy-950' : index === 1 ? 'bg-slate-300 text-navy-950' : index === 2 ? 'bg-amber-600 text-slate-100' : 'bg-navy-800 text-slate-400'}`}>
+                                    {index + 1}
+                                  </span>
+                                </td>
+                                <td class="py-4 px-4">
+                                  <div class="font-extrabold text-sm text-slate-100 flex items-center gap-1.5">
+                                    {h.name}
+                                    {h.recallFlag && h.precisionFlag && h.evFlag && (
+                                      <span class="text-gold text-xs" title="3대 베팅 지표 만장일치 추천">★</span>
+                                    )}
+                                  </div>
+                                  <div class="text-[10px] text-slate-400">{h.jockey} / {h.trainer}</div>
+                                </td>
+                                <td class="py-4 px-4">
+                                  <GateTag gate={h.gate} />
+                                </td>
+                                <td class="py-4 px-4 text-xs font-semibold text-slate-300">
+                                  {h.age}세 / {h.weight}kg 
+                                  {h.is_debut === 0 ? (
+                                    <span class={`ml-1 text-[10px] ${h.weight_diff > 0 ? 'text-red-400' : h.weight_diff < 0 ? 'text-blue-400' : 'text-slate-400'}`}>
+                                      ({h.weight_diff >= 0 ? `+${h.weight_diff}` : h.weight_diff})
+                                    </span>
+                                  ) : (
+                                    <span class="ml-1 text-[10px] text-slate-500">(신예)</span>
+                                  )}
+                                </td>
+                                <td class="py-4 px-4 text-center font-mono text-xs font-bold text-slate-200">
+                                  {(h.top3_rate_last_5 * 100).toFixed(0)}%
+                                </td>
+                                <td class="py-4 px-4 text-center font-mono text-xs font-bold text-slate-200">
+                                  {(h.synergy * 100).toFixed(1)}%
+                                </td>
+                                <td class="py-4 px-4 text-center flex justify-center">
+                                  <ConditionLight horse={h} />
+                                </td>
+                                <td class="py-4 px-4 text-right font-mono font-black text-gold text-sm">
+                                  {h.odds.toFixed(1)}배
+                                </td>
+                                <td class="py-4 px-6 text-right">
+                                  <ProbBar value={h.prob} />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* View B — 베팅 결정 탭 */}
+              {activeTab === 'B' && (
+                <div class="flex flex-col gap-6">
+                  
+                  {/* 전략 선택 카드 3개 */}
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    {/* 방향 A - 다크호스형 */}
+                    <div class="glassmorphism rounded-xl overflow-hidden border-t-4 border-t-blue-500 shadow-xl flex flex-col justify-between">
+                      <div class="p-5 border-b border-navy-800 bg-navy-900/40">
+                        <div class="flex justify-between items-center">
+                          <span class="text-xs font-black text-blue-400 tracking-wider uppercase">방향 A — 다크호스형</span>
+                          <span class="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[10px] font-bold font-mono">Recall 84%</span>
+                        </div>
+                        <h4 class="text-sm font-extrabold text-slate-200 mt-2">놓치지 않는다 - 후보 극대화</h4>
+                        <p class="text-xs text-slate-400 mt-1">임계값 0.30 이상. 입상 유력마를 하나도 배제하지 않고 폭넓게 포함.</p>
+                      </div>
+                      <div class="p-4 flex-grow flex flex-col gap-3">
+                        {directionA_Recall.length > 0 ? (
+                          directionA_Recall.map(h => (
+                            <div key={h.name} class="bg-navy-950/60 p-2.5 rounded-lg border border-navy-800 flex items-center justify-between text-xs">
+                              <div class="flex items-center gap-2">
+                                <span class="font-extrabold text-slate-200">{h.name}</span>
+                                <span class="text-slate-400 font-mono font-semibold">{h.odds.toFixed(1)}배</span>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                <ProbBar value={h.prob} size="w-12" />
+                                <EVBadge value={h.ev} />
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div class="text-xs text-slate-500 text-center py-6">조건을 충족하는 추천마가 없습니다.</div>
+                        )}
+                      </div>
+                      <div class="p-3 bg-navy-900/20 text-[10px] text-slate-400 text-center border-t border-navy-800">
+                        특징: 고배당 다크호스 탈취 가능, 낙첨 리스크 있음
+                      </div>
+                    </div>
+
+                    {/* 방향 B - 안정형 */}
+                    <div class="glassmorphism rounded-xl overflow-hidden border-t-4 border-t-emerald-500 shadow-xl flex flex-col justify-between">
+                      <div class="p-5 border-b border-navy-800 bg-navy-900/40">
+                        <div class="flex justify-between items-center">
+                          <span class="text-xs font-black text-emerald-400 tracking-wider uppercase">방향 B — 안정형</span>
+                          <span class="bg-emerald/20 text-emerald text-[10px] font-bold font-mono px-2 py-0.5 rounded">Precision 70%</span>
+                        </div>
+                        <h4 class="text-sm font-extrabold text-slate-200 mt-2">확실히 맞힌다 - 극상위권 타격</h4>
+                        <p class="text-xs text-slate-400 mt-1">임계값 0.70 이상. 당일 컨디션 및 전력이 최상인 축마만 선정.</p>
+                      </div>
+                      <div class="p-4 flex-grow flex flex-col gap-3">
+                        {directionB_Precision.length > 0 ? (
+                          directionB_Precision.map(h => (
+                            <div key={h.name} class="bg-navy-950/60 p-2.5 rounded-lg border border-navy-800 flex items-center justify-between text-xs">
+                              <div class="flex items-center gap-2">
+                                <span class="font-extrabold text-slate-200">{h.name}</span>
+                                <span class="text-slate-400 font-mono font-semibold">{h.odds.toFixed(1)}배</span>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                <ProbBar value={h.prob} size="w-12" />
+                                <EVBadge value={h.ev} />
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div class="text-xs text-amber-500/80 text-center py-6 px-4 bg-amber-950/20 border border-amber-900/30 rounded-lg">
+                            ⚠️ 현재 경주에서 Precision 70% 이상 조건을 충족하는 말이 없습니다.
+                          </div>
+                        )}
+                      </div>
+                      <div class="p-3 bg-navy-900/20 text-[10px] text-slate-400 text-center border-t border-navy-800">
+                        특징: 적중 확률이 극도로 높음, 베팅 빈도 낮음
+                      </div>
+                    </div>
+
+                    {/* 방향 C - 수익형 */}
+                    <div class="glassmorphism rounded-xl overflow-hidden border-t-4 border-t-warning shadow-xl flex flex-col justify-between">
+                      <div class="p-5 border-b border-navy-800 bg-navy-900/40">
+                        <div class="flex justify-between items-center">
+                          <span class="text-xs font-black text-warning tracking-wider uppercase">방향 C — 수익형</span>
+                          <span class="bg-amber-500/20 text-warning px-2 py-0.5 rounded text-[10px] font-bold font-mono">EV 극대화</span>
+                        </div>
+                        <h4 class="text-sm font-extrabold text-slate-200 mt-2">기대 가치 최적화 - 수익률 지배</h4>
+                        <p class="text-xs text-slate-400 mt-1">기대값 EV &gt; 0. 배당률 대비 확률 효율이 높은 마필 선별.</p>
+                      </div>
+                      <div class="p-4 flex-grow flex flex-col gap-3">
+                        {directionC_EV.length > 0 ? (
+                          directionC_EV.map(h => (
+                            <div key={h.name} class="bg-navy-950/60 p-2.5 rounded-lg border border-navy-800 flex items-center justify-between text-xs">
+                              <div class="flex items-center gap-2">
+                                <span class="font-extrabold text-slate-200">{h.name}</span>
+                                <span class="text-slate-400 font-mono font-semibold">{h.odds.toFixed(1)}배</span>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                <ProbBar value={h.prob} size="w-12" />
+                                <EVBadge value={h.ev} />
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div class="text-xs text-slate-500 text-center py-6">조건을 충족하는 추천마가 없습니다.</div>
+                        )}
+                      </div>
+                      <div class="p-3 bg-navy-900/20 text-[10px] text-slate-400 text-center border-t border-navy-800">
+                        특징: 장기적 시뮬레이션 상 가장 수익률이 우수함
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* 출전마 전체 베팅 비교표 */}
+                  <div class="glassmorphism rounded-xl overflow-hidden border border-navy-800 shadow-xl">
+                    <div class="p-4 bg-navy-900/40 border-b border-navy-800">
+                      <h4 class="text-sm font-bold text-slate-200">출전마 AI 베팅 최종 심사표</h4>
+                    </div>
+                    <div class="overflow-x-auto custom-scrollbar">
+                      <table class="w-full text-left border-collapse min-w-[650px]">
+                        <thead>
+                          <tr class="bg-navy-900/60 text-navy-600 uppercase text-[10px] font-extrabold tracking-wider border-b border-navy-800">
+                            <th class="py-3 px-5">마필명 / 시장배당</th>
+                            <th class="py-3 px-5">예측 확률</th>
+                            <th class="py-3 px-5 text-center">기대 가치 (EV)</th>
+                            <th class="py-3 px-5 text-center bg-blue-900/10">A추천 (Recall)</th>
+                            <th class="py-3 px-5 text-center bg-green-900/10">B추천 (Precision)</th>
+                            <th class="py-3 px-5 text-center bg-amber-900/10">C추천 (EV)</th>
+                            <th class="py-3 px-5 text-right">예상수익</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-navy-800/40">
+                          {calculatedHorses.map(h => {
+                            const isAllRecommended = h.recallFlag && h.precisionFlag && h.evFlag;
+                            const expectedProfit = h.ev * betBudget;
+                            return (
+                              <tr key={h.name} class="hover:bg-navy-850 transition-colors">
+                                <td class="py-4 px-5">
+                                  <div class="flex items-center gap-2">
+                                    <span class="font-extrabold text-sm text-slate-200">{h.name}</span>
+                                    {isAllRecommended && (
+                                      <span class="bg-gold text-navy-950 text-[9px] px-1.5 py-0.5 rounded font-black tracking-tight" title="3개 모형 동시 추천마">★ ALL PASS</span>
+                                    )}
+                                  </div>
+                                  <span class="text-xs text-gold font-mono font-bold">{h.odds.toFixed(1)}배</span>
+                                </td>
+                                <td class="py-4 px-5">
+                                  <ProbBar value={h.prob} />
+                                </td>
+                                <td class="py-4 px-5 text-center">
+                                  <EVBadge value={h.ev} />
+                                </td>
+                                <td class="py-4 px-5 text-center bg-blue-900/5">
+                                  {h.recallFlag ? <span class="text-blue-400 font-extrabold text-sm">✓</span> : <span class="text-slate-600 text-xs">✕</span>}
+                                </td>
+                                <td class="py-4 px-5 text-center bg-green-900/5">
+                                  {h.precisionFlag ? <span class="text-emerald font-extrabold text-sm">✓</span> : <span class="text-slate-600 text-xs">✕</span>}
+                                </td>
+                                <td class="py-4 px-5 text-center bg-amber-900/5">
+                                  {h.evFlag ? <span class="text-warning font-extrabold text-sm">✓</span> : <span class="text-slate-600 text-xs">✕</span>}
+                                </td>
+                                <td class="py-4 px-5 text-right font-mono font-extrabold">
+                                  {expectedProfit > 0 ? (
+                                    <span class="text-emerald">+{Math.round(expectedProfit).toLocaleString()}원</span>
+                                  ) : (
+                                    <span class="text-red-400">{Math.round(expectedProfit).toLocaleString()}원</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* View C — 포트폴리오 탭 */}
+              {activeTab === 'C' && (
+                <div class="flex flex-col gap-6">
+                  
+                  {/* 베팅 금액 슬라이더 */}
+                  <div class="glassmorphism p-5 rounded-xl border border-navy-800 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="w-full md:w-1/3 text-center md:text-left">
+                      <span class="text-xs font-semibold text-slate-400">시뮬레이션 가용 투자금</span>
+                      <div class="text-3xl font-black text-gold mt-1 font-mono">{betBudget.toLocaleString()}원</div>
+                    </div>
+                    <div class="w-full md:w-2/3 flex items-center gap-4">
+                      <span class="text-xs font-mono text-slate-400">5,000원</span>
+                      <input 
+                        type="range" 
+                        min="5000" 
+                        max="100000" 
+                        step="5000" 
+                        value={betBudget} 
+                        onChange={(e) => setBetBudget(Number(e.target.value))}
+                        class="flex-grow h-2 bg-navy-950 rounded-lg appearance-none cursor-pointer accent-gold"
+                      />
+                      <span class="text-xs font-mono text-slate-400">100,000원</span>
+                    </div>
+                  </div>
+
+                  {/* 포트폴리오 시나리오 3종 */}
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    {/* 안정형 포트폴리오 */}
+                    <div class="glassmorphism rounded-xl p-5 border-t-4 border-t-emerald-500 shadow-xl flex flex-col justify-between gap-4">
+                      <div>
+                        <div class="flex justify-between items-center">
+                          <h4 class="text-sm font-black text-emerald-400 uppercase tracking-wider">안정형 포트폴리오</h4>
+                          <span class="bg-emerald/20 text-emerald text-[9px] px-1.5 py-0.5 rounded font-bold">로리스크</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">방향 B(Precision 70%) 충족 추천마 대상 단승식 집중 분산 투자</p>
+                      </div>
+
+                      <div class="flex-grow flex flex-col gap-2.5 my-2">
+                        {directionB_Precision.length > 0 ? (
+                          directionB_Precision.map(h => {
+                            const alloc = betBudget / directionB_Precision.length;
+                            return (
+                              <div key={h.name} class="bg-navy-950/60 p-2.5 rounded-lg border border-navy-800 text-xs">
+                                <div class="flex justify-between font-bold text-slate-200">
+                                  <span>{h.name} (단승)</span>
+                                  <span class="text-gold font-mono">{h.odds.toFixed(1)}배</span>
+                                </div>
+                                <div class="flex justify-between text-slate-400 mt-1.5 text-[11px]">
+                                  <span>배분액: {Math.round(alloc).toLocaleString()}원</span>
+                                  <span class="text-emerald font-semibold font-mono">적중시: {Math.round(alloc * h.odds).toLocaleString()}원</span>
+                                </div>
+                                <div class="text-[10px] text-slate-500 mt-1 text-right">
+                                  손익분기 배당: {(100 / h.prob).toFixed(1)}배
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div class="bg-navy-950/80 p-4 rounded-lg border border-navy-800 text-center text-xs text-slate-500 flex flex-col gap-2">
+                            <span>Precision 충족 조건 부재</span>
+                            <span class="text-[10px] text-slate-400">대안: 1순위 예측마 {calculatedHorses[0]?.name} 단승 올인</span>
+                            <div class="bg-navy-900 p-2 rounded text-left mt-2">
+                              <div class="flex justify-between font-bold text-slate-200">
+                                <span>{calculatedHorses[0]?.name}</span>
+                                <span class="text-gold">{calculatedHorses[0]?.odds}배</span>
+                              </div>
+                              <div class="flex justify-between items-center mt-1.5 text-[11px]">
+                                <span class="text-slate-400">손익분기 배당: {(100 / (calculatedHorses[0]?.prob || 1)).toFixed(1)}배</span>
+                                <span class="text-emerald font-semibold font-mono">적중시: {Math.round(betBudget * calculatedHorses[0]?.odds).toLocaleString()}원</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div class="text-[10px] text-slate-400 pt-3 border-t border-navy-800">
+                        손익분기 최소 요건: 배당 {(100 / (calculatedHorses[0]?.prob || 1)).toFixed(1)}배 이상 유지
+                      </div>
+                    </div>
+
+                    {/* 다크호스 포트폴리오 */}
+                    <div class="glassmorphism rounded-xl p-5 border-t-4 border-t-blue-500 shadow-xl flex flex-col justify-between gap-4">
+                      <div>
+                        <div class="flex justify-between items-center">
+                          <h4 class="text-sm font-black text-blue-400 uppercase tracking-wider">다크호스 포트폴리오</h4>
+                          <span class="bg-blue-500/20 text-blue-400 text-[9px] px-1.5 py-0.5 rounded font-bold">하이리턴</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">방향 A(Recall) ∩ 방향 C(EV) 교집합 마필 대상 소액 분산 포지션</p>
+                      </div>
+
+                      <div class="flex-grow flex flex-col gap-2.5 my-2">
+                        {portfolioDarkHorses.length > 0 ? (
+                          portfolioDarkHorses.map(h => {
+                            const alloc = betBudget / portfolioDarkHorses.length;
+                            return (
+                              <div key={h.name} class="bg-navy-950/60 p-2.5 rounded-lg border border-navy-800 text-xs">
+                                <div class="flex justify-between font-bold text-slate-200">
+                                  <span>{h.name} (단승)</span>
+                                  <span class="text-gold font-mono">{h.odds.toFixed(1)}배</span>
+                                </div>
+                                <div class="flex justify-between text-slate-400 mt-1.5 text-[11px]">
+                                  <span>배분액: {Math.round(alloc).toLocaleString()}원</span>
+                                  <span class="text-blue-400 font-semibold font-mono">적중시: {Math.round(alloc * h.odds).toLocaleString()}원</span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div class="text-xs text-slate-500 text-center py-6">교집합 고배당 조건 부재 (단거리 위주 인기 정배 발생)</div>
+                        )}
+                      </div>
+
+                      <div class="pt-3 border-t border-navy-800 text-xs flex flex-col gap-1">
+                        {portfolioDarkHorses.length > 0 && (
+                          <div class="text-blue-400 font-bold">
+                            예상 최대수익: {Math.round(Math.max(...portfolioDarkHorses.map(h => (betBudget / portfolioDarkHorses.length) * h.odds)) - betBudget).toLocaleString()}원
+                          </div>
+                        )}
+                        <div class="text-[10px] text-slate-400">
+                          주의: 고배당 베팅은 환수율 분산으로 소액 투자 권장
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 켈리 기준 포트폴리오 */}
+                    <div class="glassmorphism rounded-xl p-5 border-t-4 border-t-warning shadow-xl flex flex-col justify-between gap-4">
+                      <div>
+                        <div class="flex justify-between items-center">
+                          <h4 class="text-sm font-black text-warning uppercase tracking-wider">켈리 기준 포트폴리오</h4>
+                          <span class="bg-amber-500/20 text-warning text-[9px] px-1.5 py-0.5 rounded font-bold">수학적 최적화</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">공식 (bp - q) / b에 기반한 수학적 환수율 최적 배분</p>
+                      </div>
+
+                      <div class="flex-grow my-2">
+                        {kellyAllocations.length > 0 ? (
+                          <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                              <thead>
+                                <tr class="text-slate-400 border-b border-navy-800 text-[10px] uppercase font-bold">
+                                  <th class="pb-2">마필명</th>
+                                  <th class="pb-2 text-center">비율</th>
+                                  <th class="pb-2 text-right">권장배팅</th>
+                                  <th class="pb-2 text-right">적중예상</th>
+                                </tr>
+                              </thead>
+                              <tbody class="divide-y divide-navy-800/40">
+                                {kellyAllocations.slice(0, 3).map(h => (
+                                  <tr key={h.name} class="hover:bg-navy-800/20">
+                                    <td class="py-2.5 font-bold text-slate-200">{h.name}</td>
+                                    <td class="py-2.5 text-center font-mono text-warning font-semibold">{(h.ratio * 100).toFixed(0)}%</td>
+                                    <td class="py-2.5 text-right font-mono text-slate-300">{h.amount.toLocaleString()}원</td>
+                                    <td class="py-2.5 text-right font-mono text-gold font-bold">{Math.round(h.amount * h.odds).toLocaleString()}원</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div class="text-xs text-slate-500 text-center py-6">EV 양수 마필 부재로 배분값이 산출되지 않습니다.</div>
+                        )}
+                      </div>
+
+                      <div class="text-[10px] text-slate-400 pt-3 border-t border-navy-800">
+                        공식 설명: b=배당률-1, p=확률, q=실패율
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* 조합 베팅 기대수익 및 손익분기 분석 */}
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    {/* 조합 베팅 기대수익 테이블 */}
+                    {(() => {
+                      const h0 = calculatedHorses[0];
+                      const h1 = calculatedHorses[1];
+                      if (!h0) return null;
+
+                      // 단승
+                      const oddsWin = h0.odds || 0;
+                      const probWin = h0.prob || 0;
+                      const breakEvenWin = 100 / (probWin || 1);
+                      const evWin = (probWin/100 * oddsWin) - (1 - probWin/100);
+                      const profitWin = evWin * betBudget;
+
+                      // 연승
+                      const oddsPlace = 1 + (h0.odds - 1) * 0.35;
+                      const probPlace = Math.min(95, probWin * 1.5);
+                      const breakEvenPlace = 100 / (probPlace || 1);
+                      const evPlace = (probPlace/100 * oddsPlace) - (1 - probPlace/100);
+                      const profitPlace = evPlace * betBudget;
+
+                      // 복승
+                      const oddsQuin = h1 ? (h0.odds * h1.odds) / 2.8 : 0;
+                      const probQuin = h1 ? (probWin/100 * h1.prob/100) * 1.2 * 100 : 0;
+                      const breakEvenQuin = 100 / (probQuin || 1);
+                      const evQuin = (probQuin/100 * oddsQuin) - (1 - probQuin/100);
+                      const profitQuin = evQuin * betBudget;
+
+                      return (
+                        <div class="glassmorphism rounded-xl border border-navy-800 overflow-hidden shadow-xl">
+                          <div class="p-4 bg-navy-900/40 border-b border-navy-800">
+                            <h4 class="text-sm font-bold text-slate-200">베팅 승식 조합별 예상 가치</h4>
+                          </div>
+                          <div class="p-4">
+                            <div class="overflow-x-auto custom-scrollbar">
+                              <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                  <tr class="text-slate-400 border-b border-navy-800 pb-2">
+                                    <th class="pb-2">베팅 유형</th>
+                                    <th class="pb-2">대상마</th>
+                                    <th class="pb-2 text-right">환산 배당</th>
+                                    <th class="pb-2 text-right">적중 확률</th>
+                                    <th class="pb-2 text-right">손익분기</th>
+                                    <th class="pb-2 text-right">기대 수익 (EV)</th>
+                                  </tr>
+                                </thead>
+                                <tbody class="divide-y divide-navy-800/40">
+                                  {/* 단승 */}
+                                  <tr class={`transition-colors ${evWin > 0 ? 'bg-emerald-950/30 border-l-4 border-l-emerald-500' : 'hover:bg-navy-800/20'}`}>
+                                    <td class="py-3 px-2 font-bold text-slate-200">단승 (Win)</td>
+                                    <td class="py-3 px-2">{h0.name}</td>
+                                    <td class="py-3 px-2 text-right font-mono font-bold text-gold">{oddsWin.toFixed(1)}배</td>
+                                    <td class="py-3 px-2 text-right font-mono">{probWin.toFixed(1)}%</td>
+                                    <td class="py-3 px-2 text-right font-mono text-slate-400">{breakEvenWin.toFixed(1)}배</td>
+                                    <td class={`py-3 px-2 text-right font-mono font-bold ${profitWin > 0 ? 'text-emerald' : 'text-red-400'}`}>
+                                      {profitWin > 0 ? `+${Math.round(profitWin).toLocaleString()}원` : `${Math.round(profitWin).toLocaleString()}원`}
+                                    </td>
+                                  </tr>
+                                  {/* 연승 */}
+                                  <tr class={`transition-colors ${evPlace > 0 ? 'bg-emerald-950/30 border-l-4 border-l-emerald-500' : 'hover:bg-navy-800/20'}`}>
+                                    <td class="py-3 px-2 font-bold text-slate-200">연승 (Place)</td>
+                                    <td class="py-3 px-2">{h0.name}</td>
+                                    <td class="py-3 px-2 text-right font-mono font-bold text-gold">{oddsPlace.toFixed(1)}배</td>
+                                    <td class="py-3 px-2 text-right font-mono">{probPlace.toFixed(1)}%</td>
+                                    <td class="py-3 px-2 text-right font-mono text-slate-400">{breakEvenPlace.toFixed(1)}배</td>
+                                    <td class={`py-3 px-2 text-right font-mono font-bold ${profitPlace > 0 ? 'text-emerald' : 'text-red-400'}`}>
+                                      {profitPlace > 0 ? `+${Math.round(profitPlace).toLocaleString()}원` : `${Math.round(profitPlace).toLocaleString()}원`}
+                                    </td>
+                                  </tr>
+                                  {/* 복승 */}
+                                  {h1 && (
+                                    <tr class={`transition-colors ${evQuin > 0 ? 'bg-emerald-950/30 border-l-4 border-l-emerald-500' : 'hover:bg-navy-800/20'}`}>
+                                      <td class="py-3 px-2 font-bold text-slate-200">복승 (Quinella)</td>
+                                      <td class="py-3 px-2">{h0.name} + {h1.name}</td>
+                                      <td class="py-3 px-2 text-right font-mono font-bold text-gold">{oddsQuin.toFixed(1)}배</td>
+                                      <td class="py-3 px-2 text-right font-mono">{probQuin.toFixed(1)}%</td>
+                                      <td class="py-3 px-2 text-right font-mono text-slate-400">{breakEvenQuin.toFixed(1)}배</td>
+                                      <td class={`py-3 px-2 text-right font-mono font-bold ${profitQuin > 0 ? 'text-emerald' : 'text-red-400'}`}>
+                                        {profitQuin > 0 ? `+${Math.round(profitQuin).toLocaleString()}원` : `${Math.round(profitQuin).toLocaleString()}원`}
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 손익분기 역산 표시 */}
+                    <div class="glassmorphism rounded-xl border border-navy-800 p-5 shadow-xl flex flex-col justify-between">
+                      <div>
+                        <h4 class="text-sm font-bold text-slate-200">마필별 개별 손익분기점 역산 (Break-Even)</h4>
+                        <p class="text-xs text-slate-400 mt-1">예측 확률 기준, 장기 베팅 시 수익(EV &gt; 0)을 내기 위한 최소 배당률 조건</p>
+                      </div>
+
+                      <div class="my-4">
+                        <label class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">분석 대상 마필</label>
+                        <select 
+                          value={breakEvenHorseName} 
+                          onChange={(e) => setBreakEvenHorseName(e.target.value)}
+                          class="w-full bg-navy-950 border border-navy-800 text-slate-200 px-3 py-2 rounded text-xs font-bold focus:outline-none focus:ring-1 focus:ring-gold"
+                        >
+                          {calculatedHorses.map(h => (
+                            <option key={h.name} value={h.name}>{h.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {breakEvenHorse && (
+                        <div class="flex flex-col gap-3">
+                          <div class="text-xs text-slate-300 font-bold mb-1">
+                            📢 이 말이 이기려면 배당률이 최소 {(100 / breakEvenHorse.prob).toFixed(1)}배 이상이어야 합니다. (현재 시장 배당: {breakEvenHorse.odds.toFixed(1)}배)
+                          </div>
+                          
+                          <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400">현재 시장 배당률</span>
+                            <span class="font-black text-gold">{breakEvenHorse.odds.toFixed(1)}배</span>
+                          </div>
+                          <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400">AI 손익분기 배당률</span>
+                            <span class="font-black text-emerald">{(100 / breakEvenHorse.prob).toFixed(1)}배</span>
+                          </div>
+
+                          {/* 비교 바 */}
+                          <div class="mt-2">
+                            <div class="flex justify-between text-[9px] text-slate-400 mb-1">
+                              <span>0배</span>
+                              <span>손익분기 ({(100 / breakEvenHorse.prob).toFixed(1)}배)</span>
+                              <span>최대</span>
+                            </div>
+                            <div class="w-full h-3 bg-navy-950 rounded overflow-hidden relative border border-navy-800">
+                              {/* 현재 배당 마커 */}
+                              <div 
+                                class="h-full bg-gold absolute top-0 left-0"
+                                style={{ width: `${Math.min(100, (breakEvenHorse.odds / (100 / breakEvenHorse.prob * 1.5)) * 100)}%` }}
+                              ></div>
+                              {/* 손익분기 지점 표시 선 */}
+                              <div 
+                                class="absolute top-0 bottom-0 w-0.5 bg-emerald-500 z-10"
+                                style={{ left: `${(100 / breakEvenHorse.prob / (100 / breakEvenHorse.prob * 1.5)) * 100}%` }}
+                              ></div>
+                            </div>
+                          </div>
+
+                          <div class="bg-navy-950/60 p-2.5 rounded border border-navy-800/80 text-[11px] mt-2">
+                            {breakEvenHorse.odds >= (100 / breakEvenHorse.prob) ? (
+                              <span class="text-emerald font-semibold">✓ 현재 배당률이 AI 손익분기를 초과합니다. 베팅 시 장기적으로 수익이 누적됩니다.</span>
+                            ) : (
+                              <span class="text-red-400 font-semibold">✕ 현재 배당률이 AI 손익분기 미만입니다. 베팅 시 장기적으로 손실을 입게 됩니다.</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+
+          </main>
+
+          {/* Footer 영역 */}
+          <footer class="border-t border-navy-800 bg-navy-900/60 py-6 mt-12">
+            <div class="max-w-7xl mx-auto px-4 text-center flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-navy-600">
+              <p>© 2026 KRA AI 경마 의사결정 대시보드. All rights reserved.</p>
+              <div class="flex gap-4">
+                <span>데이터 소스: 한국마사회(KRA) 3개년 공공데이터</span>
+                <span>모형 알고리즘: LightGBM v4.3.0</span>
+              </div>
+            </div>
+          </footer>
+
+        </div>
+      );
+    }
+
+    // React 18 렌더링
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
